@@ -1,23 +1,24 @@
 package io.github.singlerr.rtmplus.network;
 
 import io.netty.buffer.ByteBuf;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 @Getter
 public abstract class RTMPacket implements IMessage {
-    public RTMPacket() {
+    private String sender;
+
+    public RTMPacket(String sender) {
+        this.sender = sender;
     }
 
     public abstract void writeBytes(ByteBuf buf);
+
     public abstract void readBytes(ByteBuf buf);
-
-    private String sender;
-
-    public RTMPacket(String sender){
-        this.sender = sender;
-    }
 
     @Override
     public void fromBytes(ByteBuf buf) {
@@ -27,7 +28,7 @@ public abstract class RTMPacket implements IMessage {
 
     @Override
     public void toBytes(ByteBuf buf) {
-        ByteBufUtils.writeUTF8String(buf,sender);
+        ByteBufUtils.writeUTF8String(buf, sender);
         writeBytes(buf);
     }
 }

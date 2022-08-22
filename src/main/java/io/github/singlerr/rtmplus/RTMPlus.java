@@ -3,25 +3,17 @@ package io.github.singlerr.rtmplus;
 import io.github.singlerr.rtmplus.commands.RTMPlusCommand;
 import io.github.singlerr.rtmplus.network.*;
 import io.github.singlerr.rtmplus.network.async.PacketCallback;
-import io.github.singlerr.rtmplus.network.handlers.PacketPlayerMovementHandler;
-import io.github.singlerr.rtmplus.network.handlers.PacketResponseHandler;
-import io.github.singlerr.rtmplus.network.handlers.PacketSeatStateChangeHandler;
-import io.github.singlerr.rtmplus.network.handlers.PacketTrainSlotPosHandler;
-import io.github.singlerr.rtmplus.registry.PassengerData;
-import io.github.singlerr.rtmplus.registry.PassengerRegistry;
+import io.github.singlerr.rtmplus.network.handlers.*;
 import jp.ngt.rtm.entity.train.EntityTrainBase;
 import jp.ngt.rtm.entity.train.parts.EntityFloor;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.network.play.server.SPacketWorldBorder;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityMountEvent;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
@@ -29,7 +21,6 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.InputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
@@ -37,9 +28,6 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 @Mod(
         modid = RTMPlus.MOD_ID,
@@ -48,14 +36,11 @@ import java.util.Set;
         dependencies = "required-after:rtm"
 )
 public class RTMPlus {
-    private static final String CHANNEL_NAME = "rtmpch";
-    public static final SimpleNetworkWrapper NETWORK_INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel(RTMPlus.CHANNEL_NAME);
     public static final String MOD_ID = "rtmplus";
     public static final String MOD_NAME = "RTMPlus";
     public static final String VERSION = "1.0-SNAPSHOT";
-    /**
-     * This is the instance of your mod as created by Forge. It will never be null.
-     */
+    private static final String CHANNEL_NAME = "rtmpch";
+    public static final SimpleNetworkWrapper NETWORK_INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel(RTMPlus.CHANNEL_NAME);
     @Mod.Instance(MOD_ID)
     public static RTMPlus INSTANCE;
     private final HashMap<String, Vec3d> locHistory = new HashMap<>();
@@ -65,24 +50,17 @@ public class RTMPlus {
     @Setter
     private boolean seatLocked = false;
 
-
-    /**
-     * This is the first initialization event. Register tile entities here.
-     * The registry events below will have fired prior to entry to this method.
-     */
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         NETWORK_INSTANCE.registerMessage(PacketPlayerMovementHandler.class, PacketPlayerMovement.class, 0, Side.SERVER);
         NETWORK_INSTANCE.registerMessage(PacketSeatStateChangeHandler.class, PacketSeatStateChange.class, 1, Side.SERVER);
         NETWORK_INSTANCE.registerMessage(PacketTrainSlotPosHandler.class, PacketTrainSlotPos.class, 2, Side.SERVER);
         NETWORK_INSTANCE.registerMessage(PacketTrainSlotPosHandler.class, PacketTrainSlotPos.class, 3, Side.CLIENT);
-        NETWORK_INSTANCE.registerMessage(PacketResponseHandler.class,PacketResponse.class,4,Side.SERVER);
+        NETWORK_INSTANCE.registerMessage(PacketResponseHandler.class, PacketResponse.class, 4, Side.SERVER);
         NETWORK_INSTANCE.registerMessage(PacketSeatStateChangeHandler.class, PacketSeatStateChange.class, 5, Side.CLIENT);
+        NETWORK_INSTANCE.registerMessage(PacketLightHandler.class, PacketLight.class, 6, Side.CLIENT);
     }
 
-    /**
-     * This is the second initialization event. Register custom recipes
-     */
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
 
@@ -91,52 +69,71 @@ public class RTMPlus {
     @Mod.EventHandler
     public void start(FMLServerStartingEvent event) {
         event.registerServerCommand(new RTMPlusCommand());
-        FMLCommonHandler.instance().bus().register(new PassengerEventHandler());
+        MinecraftForge.EVENT_BUS.register(new PassengerEventHandler());
     }
 
-    /**
-     * This is the final initialization event. Register actions from other mods here
-     */
     @Mod.EventHandler
-    public void postinit(FMLPostInitializationEvent event) {
+    public void postInit(FMLPostInitializationEvent event) {
     }
 
-
-    /**
-     * This is a special class that listens to registry events, to allow creation of mod blocks and items at the proper time.
-     */
     @Mod.EventBusSubscriber
     public static class PassengerEventHandler {
-
-        @SideOnly(Side.CLIENT)
-        @SubscribeEvent
-        public void onInput(InputEvent.KeyInputEvent e) {
-            //NETWORK_INSTANCE.sendToServer(new PacketPlayerMovement(Minecraft.getMinecraft().player.getName(), Minecraft.getMinecraft().player.movementInput.moveStrafe, Minecraft.getMinecraft().player.movementInput.moveForward));
-        }
 
         @SubscribeEvent(priority = EventPriority.LOWEST)
         public void onDismount(EntityMountEvent e) {
             if (!(e.getEntityBeingMounted() instanceof EntityFloor))
                 return;
             if (e.isMounting()) {
-                RTMPlus.INSTANCE.locHistory.put(e.getEntityMounting().getName(), new Vec3d(e.getEntityMounting().posX, e.getEntityMounting().posY, e.getEntityMounting().posZ));
-                e.getEntityMounting().sendMessage(new TextComponentString( new Vec3d(e.getEntityMounting().posX, e.getEntityMounting().posY, e.getEntityMounting().posZ).toString()));
+                RTMPlus.INSTANCE.locHistory.put(e.getEntityMounting().getName(), new Vec3d(e.getEntityBeingMounted().posX - e.getEntityMounting().posX, e.getEntityBeingMounted().posY - e.getEntityMounting().posY, e.getEntityBeingMounted().posZ - e.getEntityMounting().posZ));
+                // e.getEntityMounting().sendMessage(new TextComponentString( new Vec3d(e.getEntityMounting().posX, e.getEntityMounting().posY, e.getEntityMounting().posZ).toString()));
             } else {
-                if(RTMPlus.INSTANCE.isSeatLocked()){
+                if (RTMPlus.INSTANCE.isSeatLocked()) {
                     e.setCanceled(true);
                     return;
                 }
                 if (RTMPlus.INSTANCE.locHistory.containsKey(e.getEntityMounting().getName())) {
                     Vec3d loc = RTMPlus.INSTANCE.locHistory.get(e.getEntityMounting().getName());
-                    e.getEntityMounting().setPositionAndUpdate(loc.x, loc.y, loc.z);
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            try {
+                                sleep(300);
+                                e.getEntityMounting().setPositionAndUpdate(e.getEntityMounting().posX + loc.x, e.getEntityMounting().posY + loc.y, e.getEntityMounting().posZ + loc.z);
+                                interrupt();
+                            } catch (InterruptedException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    }.start();
                     RTMPlus.INSTANCE.locHistory.remove(e.getEntityMounting().getName());
                 }
             }
         }
 
+        @SideOnly(Side.CLIENT)
         @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
+        public void onTick(TickEvent.ClientTickEvent event) {
+            if (Minecraft.getMinecraft().player == null || Minecraft.getMinecraft().player.world == null)
+                return;
 
+            /*
+            for (Entity entity : Minecraft.getMinecraft().player.world.loadedEntityList) {
+                if (entity instanceof EntityTrainBase) {
+                    EntityTrainBase train = (EntityTrainBase) entity;
+                    for (VehicleBaseConfig.Light light : train.getResourceState().getResourceSet().getConfig().interiorLights) {
+                        int x = (int) (train.posX + light.pos[0]);
+                        int y = (int) (train.posY + light.pos[1]);
+                        int z = (int) (train.posZ + light.pos[2]);
+
+                        BlockPos pos = new BlockPos(x,y,z);
+                        entity.world.getBlockState(pos).getBlock().setLightLevel(0.6F);
+                    }
+                }
+            }
+
+             */
+
+            /*
             if (!PassengerRegistry.anyPassengerExists())
                 return;
             for (Map.Entry<String, PassengerData> data : PassengerRegistry.getAllPassengers()) {
@@ -161,6 +158,7 @@ public class RTMPlus {
                 player.setVelocity(velocity.x, velocity.y, velocity.z);
                 player.velocityChanged = true;
             }
+             */
         }
 
         private Vec3d getMovementInput(EntityPlayer player) {
@@ -168,6 +166,7 @@ public class RTMPlus {
         }
 
         private Vec3d movePlayer(EntityPlayer player, EntityTrainBase train, Vec3d offset) {
+
             Vec3d movement = getMovementInput(player);
             player.sendMessage(new TextComponentString(movement.toString()));
             if (movement.length() < 0.1) {

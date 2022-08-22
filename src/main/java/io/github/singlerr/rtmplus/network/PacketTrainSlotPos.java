@@ -16,11 +16,13 @@ public class PacketTrainSlotPos extends RTMPacket {
 
     public PacketTrainSlotPos() {
     }
-    public PacketTrainSlotPos(String sender, String trainName, float[][] slotPos){
+
+    public PacketTrainSlotPos(String sender, String trainName, float[][] slotPos) {
         super(sender);
         this.trainName = trainName;
         this.slotPos = slotPos;
     }
+
     @Override
     public void readBytes(ByteBuf buf) {
         int length = buf.readInt();

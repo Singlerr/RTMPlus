@@ -7,16 +7,18 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class PacketSeatStateChange extends RTMPacket{
+public class PacketSeatStateChange extends RTMPacket {
 
     private boolean seatLocked;
 
     public PacketSeatStateChange() {
     }
-    public PacketSeatStateChange(String sender, boolean seatLocked){
+
+    public PacketSeatStateChange(String sender, boolean seatLocked) {
         super(sender);
         this.seatLocked = seatLocked;
     }
+
     @Override
     public void readBytes(ByteBuf buf) {
         seatLocked = buf.readBoolean();

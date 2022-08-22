@@ -10,7 +10,7 @@ import java.util.Map;
 public class PatchingRTMPlusCorePlugin implements IFMLLoadingPlugin {
     @Override
     public String[] getASMTransformerClass() {
-        return new String[]{PatchApplier.class.getName()};
+        return new String[]{PatchApplier.class.getName(),DLTransformer.class.getName()};
     }
 
     @Override

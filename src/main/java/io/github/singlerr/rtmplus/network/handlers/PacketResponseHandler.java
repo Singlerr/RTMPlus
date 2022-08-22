@@ -10,8 +10,8 @@ public final class PacketResponseHandler implements RTMPacketHandler<PacketRespo
 
     @Override
     public IMessage onMessage(PacketResponse message, MessageContext ctx) {
-        if(RTMPlus.INSTANCE.getRegisteredCallbacks().containsKey(message.getSender()))
-            RTMPlus.INSTANCE.getRegisteredCallbacks().get(message.getSender()).onMessage(message,ctx);
+        if (RTMPlus.INSTANCE.getRegisteredCallbacks().containsKey(message.getSender()))
+            RTMPlus.INSTANCE.getRegisteredCallbacks().get(message.getSender()).onMessage(message, ctx);
         return null;
     }
 }

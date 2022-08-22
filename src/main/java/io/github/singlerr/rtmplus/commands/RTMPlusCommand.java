@@ -9,13 +9,11 @@ import io.github.singlerr.rtmplus.RTMReflectionUtils;
 import io.github.singlerr.rtmplus.network.PacketResponse;
 import io.github.singlerr.rtmplus.network.PacketSeatStateChange;
 import io.github.singlerr.rtmplus.network.PacketTrainSlotPos;
-import io.github.singlerr.rtmplus.network.RTMPacket;
 import io.github.singlerr.rtmplus.network.async.PacketCallback;
 import io.github.singlerr.rtmplus.registry.PassengerData;
 import io.github.singlerr.rtmplus.registry.PassengerRegistry;
 import io.github.singlerr.rtmplus.registry.TrainRegistry;
 import jp.ngt.rtm.RTMResource;
-import jp.ngt.rtm.block.BlockMachineBase;
 import jp.ngt.rtm.entity.train.EntityTrainBase;
 import jp.ngt.rtm.modelpack.ModelPackManager;
 import jp.ngt.rtm.modelpack.cfg.VehicleBaseConfig;
@@ -30,11 +28,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -68,8 +65,6 @@ public class RTMPlusCommand extends CommandBase {
 
         if (args.length > 0) {
             if (args.length > 1 && args[0].equalsIgnoreCase("register")) {
-
-
                 List<EntityTrainBase> nearbyEntities = entity.world.getEntities(EntityTrainBase.class, e ->
                         distance(entity.posX, entity.posY, entity.posZ, e.posX, e.posY, e.posZ) < 10);
                 if (nearbyEntities.isEmpty()) {
@@ -96,22 +91,22 @@ public class RTMPlusCommand extends CommandBase {
                 return;
             }
 
-            if(args[0].equalsIgnoreCase("lock")){
+            if (args[0].equalsIgnoreCase("lock")) {
                 RTMPlus.INSTANCE.getRegisteredCallbacks().put(entity.getName(), (message, ctx) -> {
-                    if(message.getResponseCode() == 200)
+                    if (message.getResponseCode() == 200)
                         entity.sendMessage(new TextComponentString(message.getResponse()));
                 });
                 String[] targetPlayers = args[1].split(",");
                 for (String targetPlayer : targetPlayers) {
-                    EntityPlayerMP playerMP = server.getPlayerList().getPlayerByUsername(targetPlayer.replaceAll(" ",""));
-                    if(playerMP == null)
+                    EntityPlayerMP playerMP = server.getPlayerList().getPlayerByUsername(targetPlayer.replaceAll(" ", ""));
+                    if (playerMP == null)
                         continue;
-                    RTMPlus.INSTANCE.setSeatLocked(! RTMPlus.INSTANCE.isSeatLocked());
+                    RTMPlus.INSTANCE.setSeatLocked(!RTMPlus.INSTANCE.isSeatLocked());
                     entity.sendMessage(new TextComponentString("Now seat lock status is " + RTMPlus.INSTANCE.isSeatLocked()));
-                    RTMPlus.NETWORK_INSTANCE.sendTo(new PacketSeatStateChange(entity.getName(), RTMPlus.INSTANCE.isSeatLocked()),playerMP);
+                    RTMPlus.NETWORK_INSTANCE.sendTo(new PacketSeatStateChange(entity.getName(), RTMPlus.INSTANCE.isSeatLocked()), playerMP);
                 }
             }
-            if(args[0].equalsIgnoreCase("listen")){
+            if (args[0].equalsIgnoreCase("listen")) {
                 RTMPlus.INSTANCE.getRegisteredCallbacks().remove(entity.getName());
                 entity.sendMessage(new TextComponentString("Now not listening packets."));
             }
@@ -127,9 +122,9 @@ public class RTMPlusCommand extends CommandBase {
 
 
                     RTMPlus.INSTANCE.getRegisteredCallbacks().put(entity.getName(), (PacketCallback<PacketResponse>) (message, ctx) -> {
-                        if(message.getResponseCode() == 200){
-                            entity.sendMessage(new TextComponentString(message.getResponse() ));
-                        }else{
+                        if (message.getResponseCode() == 200) {
+                            entity.sendMessage(new TextComponentString(message.getResponse()));
+                        } else {
                             entity.sendMessage(new TextComponentString(message.getResponse()));
                         }
                     });

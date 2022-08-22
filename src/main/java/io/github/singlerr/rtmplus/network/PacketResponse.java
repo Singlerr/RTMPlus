@@ -10,14 +10,17 @@ import net.minecraftforge.fml.common.network.ByteBufUtils;
 public final class PacketResponse extends RTMPacket {
     private String response;
     private int responseCode;
-    public PacketResponse(){
+
+    public PacketResponse() {
         super();
     }
-    public PacketResponse(String sender, int responseCode, String response){
+
+    public PacketResponse(String sender, int responseCode, String response) {
         super(sender);
         this.response = response;
         this.responseCode = responseCode;
     }
+
     @Override
     public void readBytes(ByteBuf buf) {
         response = ByteBufUtils.readUTF8String(buf);
@@ -26,7 +29,7 @@ public final class PacketResponse extends RTMPacket {
 
     @Override
     public void writeBytes(ByteBuf buf) {
-        ByteBufUtils.writeUTF8String(buf,response);
+        ByteBufUtils.writeUTF8String(buf, response);
         buf.writeInt(responseCode);
     }
 }

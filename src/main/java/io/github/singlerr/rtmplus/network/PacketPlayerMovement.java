@@ -15,7 +15,8 @@ public final class PacketPlayerMovement extends RTMPacket {
     public PacketPlayerMovement() {
         super();
     }
-    public PacketPlayerMovement(String sender, double moveStrafe, double moveForward){
+
+    public PacketPlayerMovement(String sender, double moveStrafe, double moveForward) {
         super(sender);
         this.moveStrafe = moveStrafe;
         this.moveForward = moveForward;
